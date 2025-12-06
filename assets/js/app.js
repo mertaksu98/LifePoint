@@ -188,4 +188,3 @@ function filterType(type) {
 }
 
 // Sayfa yüklenince initApp'i çağır
-initApp();
