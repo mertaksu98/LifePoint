@@ -2,12 +2,11 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>LifePoint | Akıllı Acil Durum Asistanı</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body>
@@ -22,6 +21,8 @@
     </div>
 
     <div class="app-container">
+        <main id="map"></main>
+
         <aside class="sidebar">
             <div class="brand">
                 <i class="fa-solid fa-heart-pulse brand-icon"></i>
@@ -37,13 +38,19 @@
             </div>
 
             <div class="filters">
-                <button class="filter-btn active"><i class="fa-solid fa-layer-group"></i> Tümü</button>
-                <button class="filter-btn"><i class="fa-solid fa-staff-snake"></i> Eczane</button>
-                <button class="filter-btn"><i class="fa-solid fa-hospital"></i> Hastane</button>
+                <button class="filter-btn active" onclick="filterType('all')">
+                    <i class="fa-solid fa-layer-group"></i> Tümü
+                </button>
+                <button class="filter-btn" onclick="filterType('pharmacy')">
+                    <i class="fa-solid fa-staff-snake"></i> Eczane
+                </button>
+                <button class="filter-btn" onclick="filterType('hospital')">
+                    <i class="fa-solid fa-hospital"></i> Hastane
+                </button>
             </div>
 
             <div id="statusbox" class="status-bar">
-                <i class="fa-solid fa-circle-notch fa-spin"></i> Konum algılanıyor...
+                <i class="fa-solid fa-circle-notch fa-spin"></i> Sistem Hazır
             </div>
             
             <div class="results-header">
@@ -55,8 +62,8 @@
                 <li class="result-item">
                     <div class="place-icon"><i class="fa-solid fa-location-dot"></i></div>
                     <div class="place-info">
-                        <h4>Sistem Hazırlanıyor...</h4>
-                        <p>Lütfen konum izni verin.</p>
+                        <h4>Hoş Geldiniz</h4>
+                        <p>Başlamak için lütfen "Uygulamayı Başlat" butonuna basın.</p>
                     </div>
                 </li>
             </ul>
@@ -65,19 +72,23 @@
                 <p>&copy; 2024 LifePoint Project</p>
             </div>
         </aside>
-
-        <main id="map"></main>
     </div>
 
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAJfTTRosj942nNm79zFp4YjxhxISnqHEk&libraries=places&callback=initApp" async defer></script>
+    
     <script src="assets/js/app.js"></script>
 
     <script>
-        // Modalı kapatma fonksiyonu
+        // Modalı kapatma ve uygulamayı tetikleme
         function closeModal() {
             document.getElementById('welcomeModal').style.opacity = '0';
             setTimeout(() => {
                 document.getElementById('welcomeModal').style.display = 'none';
+                
+                // Modal kapanınca konum isteme fonksiyonunu çalıştır (app.js içindeki fonksiyon)
+                if (typeof getUserLocation === 'function') {
+                    getUserLocation();
+                }
             }, 500);
         }
     </script>

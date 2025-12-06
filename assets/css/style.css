@@ -7,10 +7,16 @@
     --shadow: 0 4px 15px rgba(0,0,0,0.1);
 }
 
+/* Sayfa Yapısı */
+html, body {
+    height: 100%; /* Google Maps için zorunlu */
+    width: 100%;
+}
+
 body {
     margin: 0;
     font-family: 'Poppins', sans-serif;
-    overflow: hidden;
+    overflow: hidden; /* Kaydırma çubuklarını engelle */
     background-color: var(--bg-light);
 }
 
@@ -18,7 +24,7 @@ body {
 .modal-overlay {
     position: fixed;
     top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(29, 53, 87, 0.95); /* Arka planı flu yapan lacivert */
+    background: rgba(29, 53, 87, 0.95);
     z-index: 9999;
     display: flex;
     justify-content: center;
@@ -32,6 +38,7 @@ body {
     border-radius: 20px;
     text-align: center;
     max-width: 500px;
+    width: 90%; /* Mobilde taşmasın */
     box-shadow: 0 20px 50px rgba(0,0,0,0.3);
     animation: slideUp 0.6s ease-out;
 }
@@ -57,31 +64,50 @@ body {
     transition: transform 0.2s, background 0.3s;
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 10px;
     margin: 0 auto;
+    width: 100%; /* Mobilde tam genişlik */
+    max-width: 300px;
 }
 
 .start-btn:hover { background: #d62828; transform: scale(1.05); }
 
 /* --- Ana Uygulama Yapısı --- */
-.app-container { display: flex; height: 100vh; width: 100vw; }
+.app-container {
+    display: flex;
+    height: 100vh;
+    width: 100vw;
+    flex-direction: row; /* Varsayılan: Yan yana */
+}
 
-/* Sidebar Tasarımı */
+/* Sidebar Tasarımı (Sol Taraf) */
 .sidebar {
     width: 400px;
+    min-width: 400px; /* Küçülmesini engelle */
     background: white;
     padding: 25px;
     display: flex;
     flex-direction: column;
     box-shadow: 5px 0 15px rgba(0,0,0,0.05);
-    z-index: 1000;
+    z-index: 10; /* Haritanın üstünde kalsın gölgesi */
+    box-sizing: border-box; /* Padding dahil hesapla */
 }
 
+/* Harita (Sağ Taraf) */
+#map {
+    flex-grow: 1;
+    height: 100%;
+    width: 100%;
+    z-index: 1;
+}
+
+/* Marka ve Başlıklar */
 .brand {
     display: flex;
     align-items: center;
     gap: 15px;
-    margin-bottom: 30px;
+    margin-bottom: 20px;
     padding-bottom: 20px;
     border-bottom: 1px solid #eee;
 }
@@ -91,7 +117,7 @@ body {
 .brand span { color: var(--primary); }
 .brand small { font-size: 12px; color: #888; letter-spacing: 1px; text-transform: uppercase; }
 
-/* Arama ve Filtreler */
+/* Arama Kutusu */
 .search-box {
     position: relative;
     margin-bottom: 15px;
@@ -108,31 +134,46 @@ body {
 }
 #searchInput:focus { border-color: var(--secondary); outline: none; }
 
-.filters { display: flex; gap: 10px; margin-bottom: 20px; overflow-x: auto; padding-bottom: 5px; }
+/* Filtre Butonları */
+.filters {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+    overflow-x: auto; /* Mobilde yatay kaydırma */
+    padding-bottom: 5px;
+    scrollbar-width: none; /* Firefox scrollbar gizle */
+}
+.filters::-webkit-scrollbar { display: none; } /* Chrome scrollbar gizle */
+
 .filter-btn {
     background: #f4f6f8;
     border: none;
-    padding: 8px 15px;
+    padding: 10px 20px;
     border-radius: 20px;
     font-size: 13px;
     color: #666;
     cursor: pointer;
     white-space: nowrap;
     transition: 0.3s;
+    font-weight: 500;
 }
-.filter-btn:hover, .filter-btn.active { background: var(--secondary); color: white; }
+.filter-btn:hover, .filter-btn.active {
+    background: var(--secondary);
+    color: white;
+    box-shadow: 0 4px 10px rgba(29, 53, 87, 0.3);
+}
 
 /* Liste ve Durum */
 .status-bar {
     background: #e9f5ff;
     color: var(--accent);
-    padding: 10px;
+    padding: 12px;
     border-radius: 8px;
     font-size: 13px;
-    margin-bottom: 20px;
+    margin-bottom: 15px;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
 }
 
 .results-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
@@ -144,7 +185,8 @@ body {
     padding: 0;
     margin: 0;
     flex-grow: 1;
-    overflow-y: auto;
+    overflow-y: auto; /* Kendi içinde kaydırılabilir */
+    padding-right: 5px;
 }
 
 .result-item {
@@ -158,10 +200,14 @@ body {
     transition: 0.2s;
     cursor: pointer;
 }
-.result-item:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
+.result-item:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+}
 
 .place-icon {
-    width: 40px; height: 40px;
+    width: 40px; height: 40px; min-width: 40px;
     background: #fcebeb;
     color: var(--primary);
     border-radius: 10px;
@@ -169,17 +215,53 @@ body {
     font-size: 18px;
 }
 
-.place-info h4 { margin: 0 0 5px 0; font-size: 15px; color: var(--text-dark); }
-.place-info p { margin: 0; font-size: 12px; color: #777; }
+.place-info h4 { margin: 0 0 5px 0; font-size: 14px; color: var(--text-dark); font-weight: 600; }
+.place-info p { margin: 0; font-size: 12px; color: #777; line-height: 1.4; }
 
 .sidebar-footer { margin-top: auto; font-size: 11px; color: #aaa; text-align: center; padding-top: 10px; }
-
-/* Harita */
-#map { flex-grow: 1; height: 100%; z-index: 1; }
-
-/* Animasyonlar */
-@keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 
 /* Scrollbar Tasarımı */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
+
+/* Animasyonlar */
+@keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+/* =========================================
+   📱 MOBİL UYUMLULUK (RESPONSIVE)
+   ========================================= */
+@media (max-width: 768px) {
+    .app-container {
+        flex-direction: column; /* Yan yana değil, alt alta diz */
+    }
+
+    #map {
+        order: 1; /* Harita üstte */
+        height: 55%; /* Ekranın %55'i harita olsun */
+        flex-grow: 0;
+    }
+
+    .sidebar {
+        order: 2; /* Liste altta */
+        width: 100%; /* Tam genişlik */
+        min-width: 0;
+        height: 45%; /* Ekranın %45'i liste */
+        padding: 15px;
+        border-radius: 20px 20px 0 0; /* Üst kısımları yuvarla */
+        box-shadow: 0 -5px 20px rgba(0,0,0,0.1); /* Yukarı doğru gölge */
+    }
+
+    /* Mobilde yer kazanmak için bazı öğeleri gizle veya küçült */
+    .brand { display: none; } /* Logoyu gizle */
+    .search-box { display: none; } /* Aramayı gizle (Zaten API butonları var) */
+    
+    .status-bar { padding: 8px; font-size: 12px; margin-bottom: 10px; }
+    
+    /* Filtre butonlarını daha kompakt yap */
+    .filters { justify-content: center; margin-bottom: 10px; }
+    .filter-btn { padding: 8px 16px; font-size: 12px; }
+
+    .result-item { padding: 10px; }
+    .place-icon { width: 35px; height: 35px; font-size: 16px; }
+    .place-info h4 { font-size: 13px; }
+}
