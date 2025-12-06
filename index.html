@@ -1,22 +1,26 @@
 <!DOCTYPE html>
 <html lang="tr">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>LifePoint | Akıllı Acil Durum Asistanı</title>
-    
+
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="assets/css/style.css">
 </head>
+
 <body>
 
     <div id="welcomeModal" class="modal-overlay">
         <div class="modal-content">
             <div class="modal-icon"><i class="fa-solid fa-map-location-dot"></i></div>
             <h2>LifePoint'e Hoş Geldiniz</h2>
-            <p>Konumunuza en yakın nöbetçi eczane, hastane ve acil toplanma alanlarını anında bulun. Mesafe ve uygunluk durumuna göre size en yakın noktayı görüntüleyin.</p>
-            <button onclick="closeModal()" class="start-btn">Uygulamayı Başlat <i class="fa-solid fa-arrow-right"></i></button>
+            <p>Konumunuza en yakın nöbetçi eczane, hastane ve acil toplanma alanlarını anında bulun. Mesafe ve uygunluk
+                durumuna göre size en yakın noktayı görüntüleyin.</p>
+            <button onclick="closeModal()" class="start-btn">Uygulamayı Başlat <i
+                    class="fa-solid fa-arrow-right"></i></button>
         </div>
     </div>
 
@@ -31,7 +35,7 @@
                     <small>Acil Durum Asistanı</small>
                 </div>
             </div>
-            
+
             <div class="search-box">
                 <i class="fa-solid fa-search search-icon"></i>
                 <input type="text" id="searchInput" placeholder="Hizmet ara (Eczane, Hastane)...">
@@ -52,12 +56,12 @@
             <div id="statusbox" class="status-bar">
                 <i class="fa-solid fa-circle-notch fa-spin"></i> Sistem Hazır
             </div>
-            
+
             <div class="results-header">
                 <h3>Yakındaki Noktalar</h3>
                 <span class="badge">0 Bulundu</span>
             </div>
-            
+
             <ul id="resultsList" class="results-list">
                 <li class="result-item">
                     <div class="place-icon"><i class="fa-solid fa-location-dot"></i></div>
@@ -74,23 +78,17 @@
         </aside>
     </div>
 
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAJfTTRosj942nNm79zFp4YjxhxISnqHEk&libraries=places&callback=initApp" async defer></script>
-    
+
+
     <script src="assets/js/app.js"></script>
 
     <script>
-        // Modalı kapatma ve uygulamayı tetikleme
-        function closeModal() {
-            document.getElementById('welcomeModal').style.opacity = '0';
-            setTimeout(() => {
-                document.getElementById('welcomeModal').style.display = 'none';
-                
-                // Modal kapanınca konum isteme fonksiyonunu çalıştır (app.js içindeki fonksiyon)
-                if (typeof getUserLocation === 'function') {
-                    getUserLocation();
-                }
-            }, 500);
-        }
+        (g => { var h, a, k, p = "The Google Maps JavaScript API", c = "google", l = "importLibrary", q = "__ib__", m = document, b = window; b = b[c] || (b[c] = {}); var d = b.maps || (b.maps = {}), r = new Set, e = new URLSearchParams, u = () => h || (h = new Promise(async (f, n) => { await (a = m.createElement("script")); e.set("libraries", [...r] + ""); for (k in g) e.set(k.replace(/[A-Z]/g, t => "_" + t[0].toLowerCase()), g[k]); e.set("callback", c + ".maps." + q); a.src = `https://maps.${c}apis.com/maps/api/js?` + e; d[q] = f; a.onerror = () => h = n(Error(p + " could not load.")); a.nonce = m.querySelector("script[nonce]")?.nonce || ""; m.head.append(a) })); d[l] ? console.warn(p + " only loads once. Ignoring:", g) : d[l] = (f, ...n) => r.add(f) && u().then(() => d[l](f, ...n)) })({
+            key: "AIzaSyAJfTTRosj942nNm79zFp4YjxhxISnqHEk", // <-- API KEY BURAYA
+            v: "weekly",
+        });
     </script>
+
 </body>
+
 </html>

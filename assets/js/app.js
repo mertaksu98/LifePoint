@@ -1,202 +1,191 @@
 // Global Değişkenler
 let map;
-let service;
-let infowindow;
-let userLatLng;
-let markers = []; // Haritadaki pinleri temizlemek için tutuyoruz
+let userMarker;
+let infoWindow;
+let markers = [];
 
-// 1. Haritayı Başlatan Fonksiyon (Google API yüklendiğinde otomatik çalışır)
-function initApp() {
-    // Varsayılan Konum: İstanbul (Konum izni verilmezse burası açılır)
-    const istanbul = new google.maps.LatLng(41.0082, 28.9784);
+// Kütüphaneler (Google'dan dinamik olarak çekilecek)
+let MapLibrary, PlacesLibrary, AdvancedMarkerElement;
+
+// Uygulamayı Başlat (HTML'deki loader otomatik tetikler)
+async function initApp() {
+    // 1. Gerekli Kütüphaneleri İçe Aktar (2025 Standardı)
+    MapLibrary = await google.maps.importLibrary("maps");
+    PlacesLibrary = await google.maps.importLibrary("places");
+    const markerLib = await google.maps.importLibrary("marker");
+    AdvancedMarkerElement = markerLib.AdvancedMarkerElement;
+
+    // 2. Haritayı Kur
+    const istanbul = { lat: 41.0082, lng: 28.9784 };
     
-    map = new google.maps.Map(document.getElementById("map"), {
+    map = new MapLibrary.Map(document.getElementById("map"), {
         center: istanbul,
         zoom: 12,
-        disableDefaultUI: true, // Gereksiz butonları (Sokak görünümü vb.) gizle
-        zoomControl: false,     // Mobilde daha temiz görünüm için
+        mapId: "DEMO_MAP_ID", // Google yeni markerlar için bunu zorunlu kılıyor
+        disableDefaultUI: true,
+        zoomControl: false,
     });
 
-    infowindow = new google.maps.InfoWindow();
+    infoWindow = new MapLibrary.InfoWindow();
+
+    // 3. Konum İste
+    getUserLocation();
 }
 
-// 2. Kullanıcı Konumunu Alan Fonksiyon
+// Konum Alma
 function getUserLocation() {
     const statusBox = document.getElementById('statusbox');
-    
-    // Status kutusunu güncelle
     statusBox.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Konum aranıyor...';
 
     if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
             (position) => {
-                // Konum Başarıyla Alındı
-                userLatLng = new google.maps.LatLng(
-                    position.coords.latitude,
-                    position.coords.longitude
-                );
+                const userPos = {
+                    lat: position.coords.latitude,
+                    lng: position.coords.longitude
+                };
 
-                // Haritayı kullanıcıya odakla
-                map.setCenter(userLatLng);
+                map.setCenter(userPos);
                 map.setZoom(15);
 
-                // Mavi Nokta (Kullanıcı) Markeri
-                new google.maps.Marker({
-                    position: userLatLng,
+                // Kullanıcı için Marker
+                new AdvancedMarkerElement({
                     map: map,
-                    title: "Buradasınız",
-                    icon: {
-                        path: google.maps.SymbolPath.CIRCLE,
-                        scale: 10,
-                        fillColor: "#4285F4",
-                        fillOpacity: 1,
-                        strokeColor: "white",
-                        strokeWeight: 2,
-                    },
+                    position: userPos,
+                    title: "Siz",
                 });
 
                 statusBox.innerHTML = '<i class="fa-solid fa-check"></i> Konum bulundu! Taranıyor...';
                 
-                // Konum bulununca otomatik olarak çevredeki her şeyi getir
-                searchNearbyPlaces(['pharmacy', 'hospital']);
+                // Aramayı Başlat
+                searchNearbyPlaces(['pharmacy', 'hospital'], userPos);
             },
             () => {
-                handleLocationError(true, statusBox);
+                statusBox.textContent = "Hata: Konum alınamadı.";
             }
         );
     } else {
-        // Tarayıcı desteklemiyorsa
-        handleLocationError(false, statusBox);
+        statusBox.textContent = "Tarayıcı desteklemiyor.";
     }
 }
 
-// 3. Google Places API ile Arama Yapan Fonksiyon
-function searchNearbyPlaces(types) {
-    // Önceki aramadan kalan markerları haritadan sil
-    clearMarkers();
+// YENİ Places API ile Arama (Kritik Değişiklik Burası)
+async function searchNearbyPlaces(types, center) {
+    // Eski markerları temizle
+    markers.forEach(marker => marker.map = null);
+    markers = [];
+
+    const list = document.getElementById('resultsList');
+    list.innerHTML = ''; // Listeyi temizle
+    
+    // API Çakışmasını önlemek için her tip için ayrı istek atalım (Google New Places kuralı)
+    // "hospital" ve "pharmacy" Google'ın yeni tiplerinde bazen farklı geçebilir.
+    // O yüzden genel bir text search yerine 'nearbySearch' kullanacağız ama YENİ versiyonuyla.
 
     const request = {
-        location: userLatLng,
-        radius: '2000', // 2 KM çapında ara
-        type: types     // ['pharmacy'] veya ['hospital'] veya ikisi
+        fields: ["displayName", "location", "businessStatus", "openingHours"],
+        locationRestriction: {
+            center: center,
+            radius: 2000, // 2 km
+        },
+        includedPrimaryTypes: types, // ['pharmacy', 'hospital']
+        maxResultCount: 10,
     };
 
-    service = new google.maps.places.PlacesService(map);
-    
-    service.nearbySearch(request, (results, status) => {
-        const resultsList = document.getElementById('resultsList');
-        const countBadge = document.querySelector('.badge');
-        const statusBox = document.getElementById('statusbox');
+    try {
+        // Yeni 'Place' sınıfı üzerinden arama
+        const { places } = await PlacesLibrary.Place.searchNearby(request);
 
-        if (status === google.maps.places.PlacesServiceStatus.OK) {
-            // Listeyi temizle
-            resultsList.innerHTML = '';
-            countBadge.textContent = `${results.length} Bulundu`;
-            statusBox.innerHTML = `<i class="fa-solid fa-check"></i> ${results.length} nokta listelendi.`;
+        const badge = document.querySelector('.badge');
+        badge.textContent = `${places.length} Bulundu`;
+        document.getElementById('statusbox').innerHTML = `<i class="fa-solid fa-check"></i> ${places.length} nokta bulundu.`;
 
-            // Sonuçları döngüye sok
-            results.forEach((place) => {
-                createMarker(place);
-                addPlaceToList(place);
-            });
-        } else {
-            statusBox.textContent = "Yakında sonuç bulunamadı.";
-            resultsList.innerHTML = '<li class="result-item"><div class="place-info"><p>Bu konumda aradığınız kriterde yer yok.</p></div></li>';
+        if (places.length === 0) {
+            list.innerHTML = '<li class="result-item">Sonuç bulunamadı.</li>';
+            return;
         }
-    });
+
+        places.forEach((place) => {
+            createMarker(place);
+            addPlaceToList(place);
+        });
+
+    } catch (error) {
+        console.error("Arama hatası:", error);
+        document.getElementById('statusbox').textContent = "Veri çekilemedi (Konsola bak).";
+    }
 }
 
-// 4. Haritaya Pin (Marker) Ekleme
+// Marker Oluşturma
 function createMarker(place) {
-    const marker = new google.maps.Marker({
+    const marker = new AdvancedMarkerElement({
         map: map,
-        position: place.geometry.location,
-        title: place.name,
-        animation: google.maps.Animation.DROP // Pinler yukarıdan düşerek gelsin
+        position: place.location,
+        title: place.displayName,
     });
 
-    markers.push(marker); // Silmek için diziye kaydet
+    markers.push(marker);
 
-    // Pine tıklanınca isim çıksın
-    google.maps.event.addListener(marker, "click", () => {
-        infowindow.setContent(`
-            <div style="padding:5px; color:black;">
-                <strong>${place.name}</strong><br>
-                ${place.vicinity}
+    // Tıklama Olayı
+    marker.addListener("click", () => {
+        infoWindow.setContent(`
+            <div style="color:black; padding:5px;">
+                <strong>${place.displayName}</strong><br>
+                ${place.businessStatus || ''}
             </div>
         `);
-        infowindow.open(map, marker);
+        infoWindow.open(map, marker);
     });
 }
 
-// 5. Sol Menüye Sonuç Ekleme
+// Listeye Ekleme
 function addPlaceToList(place) {
     const list = document.getElementById('resultsList');
     
-    // İkon Belirleme
-    let iconClass = 'fa-map-pin';
-    if (place.types.includes('pharmacy')) iconClass = 'fa-staff-snake';
-    if (place.types.includes('hospital')) iconClass = 'fa-hospital';
-
-    // Açık mı Kapalı mı?
-    let openStatus = '';
-    if (place.opening_hours) {
-        openStatus = place.opening_hours.open_now 
-            ? '<span style="color: green; font-weight:bold;">● Açık</span>' 
-            : '<span style="color: red;">● Kapalı</span>';
+    // Açık/Kapalı Kontrolü (Yeni API formatı farklıdır)
+    let openStatus = '<span style="color:gray">Bilinmiyor</span>';
+    if (place.openingHours) {
+        openStatus = place.openingHours.isOpen 
+            ? '<span style="color:green; font-weight:bold">● Açık</span>' 
+            : '<span style="color:red">● Kapalı</span>';
     }
 
     const li = document.createElement('li');
     li.className = 'result-item';
     li.innerHTML = `
-        <div class="place-icon"><i class="fa-solid ${iconClass}"></i></div>
+        <div class="place-icon"><i class="fa-solid fa-location-dot"></i></div>
         <div class="place-info">
-            <h4>${place.name}</h4>
-            <p>${place.vicinity}</p>
+            <h4>${place.displayName}</h4>
             <small>${openStatus}</small>
         </div>
     `;
-    
-    // Listeye tıklayınca haritada o noktaya git
+
     li.addEventListener('click', () => {
-        map.setCenter(place.geometry.location);
+        map.setCenter(place.location);
         map.setZoom(17);
-        // Mobilde listeye tıklayınca haritaya odaklanmak için yukarı kaydırabiliriz (Opsiyonel)
-        document.getElementById('map').scrollIntoView({behavior: 'smooth'});
     });
 
     list.appendChild(li);
 }
 
-// 6. Filtre Butonları Tıklanınca Çalışan Fonksiyon
+// Buton Kontrolü
 function filterType(type) {
-    // Aktif butonu güncelle
+    // Buton stillerini güncelle
     document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
-    
-    // Tıklanan butonu bul (İkona tıklanırsa parent button'ı al)
-    const clickedBtn = event.target.closest('button');
-    if(clickedBtn) clickedBtn.classList.add('active');
+    event.target.closest('button').classList.add('active');
 
-    // Aramayı başlat
+    // Harita merkezini al (kullanıcı o an nereye bakıyorsa)
+    const center = { 
+        lat: map.getCenter().lat(), 
+        lng: map.getCenter().lng() 
+    };
+
     if (type === 'all') {
-        searchNearbyPlaces(['pharmacy', 'hospital']);
+        searchNearbyPlaces(['pharmacy', 'hospital'], center);
     } else {
-        searchNearbyPlaces([type]);
+        searchNearbyPlaces([type], center);
     }
 }
 
-// Yardımcı: Markerları Temizle
-function clearMarkers() {
-    for (let i = 0; i < markers.length; i++) {
-        markers[i].setMap(null);
-    }
-    markers = [];
-}
-
-// Hata Yönetimi
-function handleLocationError(browserHasGeolocation, element) {
-    element.textContent = browserHasGeolocation
-        ? "Hata: Konum servisine izin verilmedi."
-        : "Hata: Tarayıcınız konum özelliğini desteklemiyor.";
-    element.style.color = 'red';
-}
+// Sayfa yüklenince initApp'i çağır
+initApp();
