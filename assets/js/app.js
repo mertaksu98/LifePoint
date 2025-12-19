@@ -4,35 +4,112 @@ let userMarker;
 let infoWindow;
 let markers = [];
 
-// Kütüphaneler (Google'dan dinamik olarak çekilecek)
+// Kütüphaneler
 let MapLibrary, PlacesLibrary, AdvancedMarkerElement;
 
-// Uygulamayı Başlat (HTML'deki loader otomatik tetikler)
+// STATİK ACİL TOPLANMA ALANLARI VERİSİ
+const emergencyGatheringPoints = [
+    {
+        name: "Yenikapı Etkinlik Alanı",
+        type: "gathering",
+        lat: 41.0062,
+        lng: 28.9568,
+        description: "Büyük kapasiteli toplanma ve çadır kurma alanı.",
+    },
+    {
+        name: "Maltepe Sahil Parkı",
+        type: "gathering",
+        lat: 40.9234,
+        lng: 29.1384,
+        description: "Anadolu yakasındaki en büyük acil toplanma noktası.",
+    },
+    {
+        name: "Taksim Meydanı",
+        type: "gathering",
+        lat: 41.0371,
+        lng: 28.9856,
+        description: "Kısıtlı kapasiteli, merkezi konumda ilk toplanma noktası.",
+    },
+    {
+        name: "Kadıköy İskele Meydanı",
+        type: "gathering",
+        lat: 40.9839,
+        lng: 29.0270,
+        description: "Deniz ulaşımına yakın, küçük çaplı toplanma alanı.",
+    }
+];
+
+// Uygulamayı Başlat
 async function initApp() {
-    // 1. Gerekli Kütüphaneleri İçe Aktar (2025 Standardı)
-    MapLibrary = await google.maps.importLibrary("maps");
-    PlacesLibrary = await google.maps.importLibrary("places");
-    const markerLib = await google.maps.importLibrary("marker");
-    AdvancedMarkerElement = markerLib.AdvancedMarkerElement;
+    try {
+        MapLibrary = await google.maps.importLibrary("maps");
+        PlacesLibrary = await google.maps.importLibrary("places");
+        const markerLib = await google.maps.importLibrary("marker");
+        AdvancedMarkerElement = markerLib.AdvancedMarkerElement;
 
-    // 2. Haritayı Kur
-    const istanbul = { lat: 41.0082, lng: 28.9784 };
-    
-    map = new MapLibrary.Map(document.getElementById("map"), {
-        center: istanbul,
-        zoom: 12,
-        mapId: "DEMO_MAP_ID", // Google yeni markerlar için bunu zorunlu kılıyor
-        disableDefaultUI: true,
-        zoomControl: false,
-    });
+        const istanbul = { lat: 41.0082, lng: 28.9784 };
 
-    infoWindow = new MapLibrary.InfoWindow();
+        map = new MapLibrary.Map(document.getElementById("map"), {
+            center: istanbul,
+            zoom: 12,
+            mapId: "DEMO_MAP_ID",
+            disableDefaultUI: true,
+            zoomControl: false,
+        });
 
-    // 3. Konum İste
-    getUserLocation();
+        infoWindow = new MapLibrary.InfoWindow();
+
+        // Arama Kutusu
+        setupSearchBox();
+
+        // "Konumuma Git" Butonu
+        const recenterBtn = document.getElementById('recenterBtn');
+        if (recenterBtn) {
+            recenterBtn.addEventListener('click', () => getUserLocation());
+        }
+
+        // Konum İste
+        getUserLocation();
+        
+    } catch (error) {
+        console.error("Harita yüklenirken hata oluştu:", error);
+    }
 }
 
-// Konum Alma
+// --- YARDIMCI FONKSİYONLAR (KRİTİK DÜZELTMELER) ---
+
+// Koordinatları Güvenli Al (Hata Çözen Kısım)
+function getSafeLat(place) {
+    if (place.location && typeof place.location.lat === 'function') return place.location.lat();
+    return place.location?.lat || 0;
+}
+function getSafeLng(place) {
+    if (place.location && typeof place.location.lng === 'function') return place.location.lng();
+    return place.location?.lng || 0;
+}
+
+// İsim Çözümleyici
+function getPlaceName(place) {
+    if (!place.displayName) return "İsimsiz";
+    return typeof place.displayName === 'string' ? place.displayName : place.displayName.text;
+}
+
+// --------------------------------------------------
+
+function setupSearchBox() {
+    const input = document.getElementById('searchInput');
+    input.addEventListener('keypress', function (e) {
+        if (e.key === 'Enter') {
+            const query = input.value.trim();
+            if (query.length > 0) searchByKeyword(query);
+        }
+    });
+    document.querySelector('.search-icon').addEventListener('click', () => {
+        const query = input.value.trim();
+        if (query.length > 0) searchByKeyword(query);
+    });
+}
+
 function getUserLocation() {
     const statusBox = document.getElementById('statusbox');
     statusBox.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Konum aranıyor...';
@@ -44,21 +121,17 @@ function getUserLocation() {
                     lat: position.coords.latitude,
                     lng: position.coords.longitude
                 };
-
                 map.setCenter(userPos);
                 map.setZoom(15);
 
-                // Kullanıcı için Marker
-                new AdvancedMarkerElement({
+                if (userMarker) userMarker.map = null;
+                userMarker = new AdvancedMarkerElement({
                     map: map,
                     position: userPos,
                     title: "Siz",
+                    content: createPinElement("#4285F4")
                 });
-
-                statusBox.innerHTML = '<i class="fa-solid fa-check"></i> Konum bulundu! Taranıyor...';
-                
-                // Aramayı Başlat
-                searchNearbyPlaces(['pharmacy', 'hospital'], userPos);
+                statusBox.innerHTML = '<i class="fa-solid fa-check"></i> Konum bulundu!';
             },
             () => {
                 statusBox.textContent = "Hata: Konum alınamadı.";
@@ -69,122 +142,225 @@ function getUserLocation() {
     }
 }
 
-// YENİ Places API ile Arama (Kritik Değişiklik Burası)
-async function searchNearbyPlaces(types, center) {
-    // Eski markerları temizle
-    markers.forEach(marker => marker.map = null);
-    markers = [];
-
-    const list = document.getElementById('resultsList');
-    list.innerHTML = ''; // Listeyi temizle
-    
-    // API Çakışmasını önlemek için her tip için ayrı istek atalım (Google New Places kuralı)
-    // "hospital" ve "pharmacy" Google'ın yeni tiplerinde bazen farklı geçebilir.
-    // O yüzden genel bir text search yerine 'nearbySearch' kullanacağız ama YENİ versiyonuyla.
+async function searchByKeyword(keyword) {
+    clearMap();
+    const statusBox = document.getElementById('statusbox');
+    statusBox.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> "${keyword}" aranıyor...`;
 
     const request = {
-        fields: ["displayName", "location", "businessStatus", "openingHours"],
-        locationRestriction: {
-            center: center,
-            radius: 2000, // 2 km
-        },
-        includedPrimaryTypes: types, // ['pharmacy', 'hospital']
+        textQuery: keyword,
+        fields: ["displayName", "location", "formattedAddress", "businessStatus"],
+        locationBias: { center: map.getCenter(), radius: 2000 },
         maxResultCount: 10,
     };
 
     try {
-        // Yeni 'Place' sınıfı üzerinden arama
+        const { places } = await PlacesLibrary.Place.searchByText(request);
+        handleResults(places);
+    } catch (error) {
+        console.error("Metin arama hatası:", error);
+        statusBox.textContent = "Sonuç bulunamadı.";
+    }
+}
+
+async function searchNearbyPlaces(types, center) {
+    clearMap();
+    const request = {
+        fields: ["displayName", "location", "formattedAddress", "businessStatus"],
+        locationRestriction: { center: center, radius: 2000 },
+        includedPrimaryTypes: types, 
+        maxResultCount: 10,
+    };
+
+    try {
         const { places } = await PlacesLibrary.Place.searchNearby(request);
+        handleResults(places);
+    } catch (error) {
+        console.error("Kategori arama hatası:", error);
+    }
+}
 
-        const badge = document.querySelector('.badge');
+function handleResults(places) {
+    const badge = document.querySelector('.badge');
+    const statusBox = document.getElementById('statusbox');
+    
+    if (places && places.length > 0) {
         badge.textContent = `${places.length} Bulundu`;
-        document.getElementById('statusbox').innerHTML = `<i class="fa-solid fa-check"></i> ${places.length} nokta bulundu.`;
-
-        if (places.length === 0) {
-            list.innerHTML = '<li class="result-item">Sonuç bulunamadı.</li>';
-            return;
-        }
-
+        statusBox.innerHTML = `<i class="fa-solid fa-check"></i> ${places.length} sonuç listelendi.`;
+        
         places.forEach((place) => {
             createMarker(place);
             addPlaceToList(place);
         });
-
-    } catch (error) {
-        console.error("Arama hatası:", error);
-        document.getElementById('statusbox').textContent = "Veri çekilemedi (Konsola bak).";
+    } else {
+        badge.textContent = "0 Bulundu";
+        statusBox.textContent = "Yakında sonuç yok.";
+        document.getElementById('resultsList').innerHTML = '<li class="result-item">Sonuç bulunamadı.</li>';
     }
 }
 
-// Marker Oluşturma
+function clearMap() {
+    markers.forEach(marker => marker.map = null);
+    markers = [];
+    document.getElementById('resultsList').innerHTML = '';
+}
+
+function displayGatheringPoints() {
+    clearMap();
+    const badge = document.querySelector('.badge');
+    badge.textContent = `${emergencyGatheringPoints.length} Bulundu`;
+    document.getElementById('statusbox').innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> Toplanma Alanları.`;
+
+    emergencyGatheringPoints.forEach(point => {
+        // Statik veride lat/lng zaten sayıdır
+        const marker = new AdvancedMarkerElement({
+            map: map,
+            position: { lat: point.lat, lng: point.lng },
+            title: point.name,
+            content: createPinElement("#008000") 
+        });
+        markers.push(marker);
+
+        marker.addListener("click", () => {
+            infoWindow.setContent(`
+                <div style="color:black; padding:10px; font-family: sans-serif; max-width: 200px;">
+                    <strong style="color: #008000;">${point.name}</strong><br>
+                    <small>ACİL TOPLANMA ALANI</small><br>
+                    <p style="font-size:12px; margin:5px 0;">${point.description}</p>
+                    <button class="directions-btn" onclick="getDirections(${point.lat}, ${point.lng})">
+                        <i class="fa-solid fa-route"></i> Yol Tarifi
+                    </button>
+                </div>
+            `);
+            infoWindow.open(map, marker);
+        });
+
+        addGatheringPointToList(point);
+    });
+}
+
+function addGatheringPointToList(point) {
+    const list = document.getElementById('resultsList');
+    const li = document.createElement('li');
+    li.className = 'result-item';
+    li.innerHTML = `
+        <div class="place-icon" style="background: #e6ffe6; color: #008000;"><i class="fa-solid fa-person-shelter"></i></div>
+        <div class="place-info">
+            <h4>${point.name}</h4>
+            <p style="font-size:11px; color:#666;">${point.description}</p>
+            <button class="directions-btn" onclick="getDirections(${point.lat}, ${point.lng})">
+                <i class="fa-solid fa-route"></i> Yol Tarifi Al
+            </button>
+        </div>
+    `;
+    li.addEventListener('click', () => {
+        map.setCenter({ lat: point.lat, lng: point.lng });
+        map.setZoom(17);
+    });
+    list.appendChild(li);
+}
+
+// Marker Oluşturma (GÜNCELLENDİ)
 function createMarker(place) {
+    const name = getPlaceName(place);
+    const lat = getSafeLat(place); // Güvenli koordinat
+    const lng = getSafeLng(place); // Güvenli koordinat
+
     const marker = new AdvancedMarkerElement({
         map: map,
-        position: place.location,
-        title: place.displayName,
+        position: { lat: lat, lng: lng },
+        title: name,
+        content: createPinElement("#E63946") 
     });
-
     markers.push(marker);
 
-    // Tıklama Olayı
     marker.addListener("click", () => {
+        const address = place.formattedAddress || "Adres yok";
         infoWindow.setContent(`
-            <div style="color:black; padding:5px;">
-                <strong>${place.displayName}</strong><br>
-                ${place.businessStatus || ''}
+            <div style="color:black; padding:10px; font-family: sans-serif; max-width:200px;">
+                <strong>${name}</strong><br>
+                <p style="font-size:11px; margin:5px 0;">${address}</p>
+                <button class="directions-btn" onclick="getDirections(${lat}, ${lng})">
+                    <i class="fa-solid fa-route"></i> Yol Tarifi
+                </button>
             </div>
         `);
         infoWindow.open(map, marker);
     });
 }
 
-// Listeye Ekleme
+// Listeye Ekleme (GÜNCELLENDİ)
 function addPlaceToList(place) {
     const list = document.getElementById('resultsList');
-    
-    // Açık/Kapalı Kontrolü (Yeni API formatı farklıdır)
-    let openStatus = '<span style="color:gray">Bilinmiyor</span>';
-    if (place.openingHours) {
-        openStatus = place.openingHours.isOpen 
-            ? '<span style="color:green; font-weight:bold">● Açık</span>' 
-            : '<span style="color:red">● Kapalı</span>';
-    }
+    const name = getPlaceName(place);
+    const address = place.formattedAddress || "Adres bilgisi yok";
+    const lat = getSafeLat(place); // Güvenli koordinat
+    const lng = getSafeLng(place); // Güvenli koordinat
 
     const li = document.createElement('li');
     li.className = 'result-item';
     li.innerHTML = `
         <div class="place-icon"><i class="fa-solid fa-location-dot"></i></div>
         <div class="place-info">
-            <h4>${place.displayName}</h4>
-            <small>${openStatus}</small>
+            <h4>${name}</h4>
+            <p style="font-size:11px; color:#666;">${address}</p>
+            <button class="directions-btn" onclick="getDirections(${lat}, ${lng})">
+                <i class="fa-solid fa-route"></i> Yol Tarifi Al
+            </button>
         </div>
     `;
-
     li.addEventListener('click', () => {
-        map.setCenter(place.location);
+        map.setCenter({ lat: lat, lng: lng });
         map.setZoom(17);
     });
-
     list.appendChild(li);
 }
 
-// Buton Kontrolü
 function filterType(type) {
-    // Buton stillerini güncelle
     document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
-    event.target.closest('button').classList.add('active');
+    const btn = event.target.closest('button');
+    if(btn) btn.classList.add('active');
 
-    // Harita merkezini al (kullanıcı o an nereye bakıyorsa)
-    const center = { 
-        lat: map.getCenter().lat(), 
-        lng: map.getCenter().lng() 
-    };
-
-    if (type === 'all') {
-        searchNearbyPlaces(['pharmacy', 'hospital'], center);
-    } else {
-        searchNearbyPlaces([type], center);
+    if (type === 'gathering') {
+        displayGatheringPoints();
+        return;
+    }
+    if(map) {
+        const center = { lat: map.getCenter().lat(), lng: map.getCenter().lng() };
+        if (type === 'all') {
+            searchNearbyPlaces(['pharmacy', 'hospital'], center);
+        } else {
+            searchNearbyPlaces([type], center);
+        }
     }
 }
 
-// Sayfa yüklenince initApp'i çağır
+// Yol Tarifi (URL YAPISI DÜZELTİLDİ)
+function getDirections(lat, lng) {
+    // Standart Google Maps URL yapısı
+    const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+    
+    if (navigator.geolocation) {
+         navigator.geolocation.getCurrentPosition((pos) => {
+            const origin = `${pos.coords.latitude},${pos.coords.longitude}`;
+            // Konum varsa başlangıç noktası ekle
+            window.open(url + `&origin=${origin}`, '_blank');
+         }, () => {
+             // Konum yoksa sadece hedefi aç
+             window.open(url, '_blank');
+         });
+    } else {
+        window.open(url, '_blank');
+    }
+}
+
+function createPinElement(color) {
+    const pin = document.createElement("div");
+    pin.style.backgroundColor = color;
+    pin.style.width = "18px";
+    pin.style.height = "18px";
+    pin.style.borderRadius = "50%";
+    pin.style.border = "2px solid white";
+    pin.style.boxShadow = "0 2px 4px rgba(0,0,0,0.3)";
+    return pin;
+}
