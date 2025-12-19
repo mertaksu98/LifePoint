@@ -68,6 +68,24 @@ async function initApp() {
             recenterBtn.addEventListener('click', () => getUserLocation());
         }
 
+        // MOBİL PANEL KONTROLÜ (YENİ EKLENEN KISIM)
+        const handle = document.getElementById('mobile-handle');
+        const sidebar = document.querySelector('.sidebar');
+        
+        if(handle && sidebar) {
+            handle.addEventListener('click', () => {
+                sidebar.classList.toggle('open');
+            });
+
+            // Ekstra: Filtrelere tıklayınca da aç
+            const filters = document.querySelector('.filters');
+            if(filters) {
+                filters.addEventListener('click', () => {
+                    sidebar.classList.add('open');
+                });
+            }
+        }
+
         // Konum İste
         getUserLocation();
         
@@ -76,9 +94,8 @@ async function initApp() {
     }
 }
 
-// --- YARDIMCI FONKSİYONLAR (KRİTİK DÜZELTMELER) ---
+// --- YARDIMCI FONKSİYONLAR ---
 
-// Koordinatları Güvenli Al (Hata Çözen Kısım)
 function getSafeLat(place) {
     if (place.location && typeof place.location.lat === 'function') return place.location.lat();
     return place.location?.lat || 0;
@@ -88,7 +105,6 @@ function getSafeLng(place) {
     return place.location?.lng || 0;
 }
 
-// İsim Çözümleyici
 function getPlaceName(place) {
     if (!place.displayName) return "İsimsiz";
     return typeof place.displayName === 'string' ? place.displayName : place.displayName.text;
@@ -132,9 +148,14 @@ function getUserLocation() {
                     content: createPinElement("#4285F4")
                 });
                 statusBox.innerHTML = '<i class="fa-solid fa-check"></i> Konum bulundu!';
+                
+                // OTOMATİK ARAMA (Bunu ekledik)
+                searchNearbyPlaces(['hospital'], userPos);
             },
             () => {
-                statusBox.textContent = "Hata: Konum alınamadı.";
+                statusBox.textContent = "Hata: Konum alınamadı. Varsayılan konum gösteriliyor.";
+                // Konum yoksa varsayılan merkezde ara
+                searchNearbyPlaces(['hospital'], map.getCenter());
             }
         );
     } else {
@@ -212,7 +233,6 @@ function displayGatheringPoints() {
     document.getElementById('statusbox').innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> Toplanma Alanları.`;
 
     emergencyGatheringPoints.forEach(point => {
-        // Statik veride lat/lng zaten sayıdır
         const marker = new AdvancedMarkerElement({
             map: map,
             position: { lat: point.lat, lng: point.lng },
@@ -260,11 +280,10 @@ function addGatheringPointToList(point) {
     list.appendChild(li);
 }
 
-// Marker Oluşturma (GÜNCELLENDİ)
 function createMarker(place) {
     const name = getPlaceName(place);
-    const lat = getSafeLat(place); // Güvenli koordinat
-    const lng = getSafeLng(place); // Güvenli koordinat
+    const lat = getSafeLat(place);
+    const lng = getSafeLng(place);
 
     const marker = new AdvancedMarkerElement({
         map: map,
@@ -289,13 +308,12 @@ function createMarker(place) {
     });
 }
 
-// Listeye Ekleme (GÜNCELLENDİ)
 function addPlaceToList(place) {
     const list = document.getElementById('resultsList');
     const name = getPlaceName(place);
     const address = place.formattedAddress || "Adres bilgisi yok";
-    const lat = getSafeLat(place); // Güvenli koordinat
-    const lng = getSafeLng(place); // Güvenli koordinat
+    const lat = getSafeLat(place);
+    const lng = getSafeLng(place);
 
     const li = document.createElement('li');
     li.className = 'result-item';
@@ -337,7 +355,7 @@ function filterType(type) {
 
 // Yol Tarifi (URL YAPISI DÜZELTİLDİ)
 function getDirections(lat, lng) {
-    // Standart Google Maps URL yapısı
+    // Standart Google Maps URL yapısı (Düzeltildi)
     const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
     
     if (navigator.geolocation) {
