@@ -19,15 +19,16 @@
             <h2>LifePoint'e Hoş Geldiniz</h2>
             <p>Konumunuza en yakın nöbetçi eczane, hastane ve acil toplanma alanlarını anında bulun. Mesafe ve uygunluk
                 durumuna göre size en yakın noktayı görüntüleyin.</p>
-            <button onclick="closeModal()" class="start-btn">Uygulamayı Başlat <i class="fa-solid fa-arrow-right"></i></button>
+            <button onclick="closeModal()" class="start-btn">Uygulamayı Başlat <i
+                    class="fa-solid fa-arrow-right"></i></button>
         </div>
     </div>
 
     <div class="app-container">
-        
+
         <div style="position: relative; flex-grow: 1; height: 100%;">
             <main id="map"></main>
-            
+
             <button id="recenterBtn" title="Konumuma Dön">
                 <i class="fa-solid fa-crosshairs"></i>
             </button>
@@ -35,8 +36,8 @@
 
         <aside class="sidebar">
             <div id="mobile-handle" class="mobile-handle">
-        <div class="handle-bar"></div>
-    </div>
+                <div class="handle-bar"></div>
+            </div>
             <div class="brand">
                 <i class="fa-solid fa-heart-pulse brand-icon"></i>
                 <div>
@@ -85,7 +86,7 @@
             </ul>
 
             <div class="sidebar-footer">
-                <p>&copy; 2024 LifePoint Project</p>
+                <p>&copy; 2025 LifePoint Project</p>
             </div>
         </aside>
     </div>
@@ -93,10 +94,10 @@
     <script>
         function closeModal() {
             const modal = document.getElementById('welcomeModal');
-            modal.style.opacity = '0'; 
+            modal.style.opacity = '0';
 
             setTimeout(() => {
-                modal.style.display = 'none'; 
+                modal.style.display = 'none';
 
                 if (typeof initApp === 'function') {
                     console.log("Uygulama başlatılıyor...");
@@ -113,10 +114,11 @@
 
     <script>
         (g => { var h, a, k, p = "The Google Maps JavaScript API", c = "google", l = "importLibrary", q = "__ib__", m = document, b = window; b = b[c] || (b[c] = {}); var d = b.maps || (b.maps = {}), r = new Set, e = new URLSearchParams, u = () => h || (h = new Promise(async (f, n) => { await (a = m.createElement("script")); e.set("libraries", [...r] + ""); for (k in g) e.set(k.replace(/[A-Z]/g, t => "_" + t[0].toLowerCase()), g[k]); e.set("callback", c + ".maps." + q); a.src = `https://maps.${c}apis.com/maps/api/js?` + e; d[q] = f; a.onerror = () => h = n(Error(p + " could not load.")); a.nonce = m.querySelector("script[nonce]")?.nonce || ""; m.head.append(a) })); d[l] ? console.warn(p + " only loads once. Ignoring:", g) : d[l] = (f, ...n) => r.add(f) && u().then(() => d[l](f, ...n)) })({
-            key: "AIzaSyAJfTTRosj942nNm79zFp4YjxhxISnqHEk", // API KEY'İN BURADA
+            key: "AIzaSyAJfTTRosj942nNm79zFp4YjxhxISnqHEk", // API KEY
             v: "weekly",
         });
     </script>
 
 </body>
+
 </html>

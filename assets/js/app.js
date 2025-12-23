@@ -1,10 +1,8 @@
-// Global Değişkenler
 let map;
 let userMarker;
 let infoWindow;
 let markers = [];
 
-// Kütüphaneler
 let MapLibrary, PlacesLibrary, AdvancedMarkerElement;
 
 // STATİK ACİL TOPLANMA ALANLARI VERİSİ
@@ -39,7 +37,7 @@ const emergencyGatheringPoints = [
     }
 ];
 
-// Uygulamayı Başlat
+
 async function initApp() {
     try {
         MapLibrary = await google.maps.importLibrary("maps");
@@ -68,7 +66,7 @@ async function initApp() {
             recenterBtn.addEventListener('click', () => getUserLocation());
         }
 
-        // MOBİL PANEL KONTROLÜ (YENİ EKLENEN KISIM)
+        // MOBİL PANEL KONTROLÜ 
         const handle = document.getElementById('mobile-handle');
         const sidebar = document.querySelector('.sidebar');
         
@@ -94,7 +92,6 @@ async function initApp() {
     }
 }
 
-// --- YARDIMCI FONKSİYONLAR ---
 
 function getSafeLat(place) {
     if (place.location && typeof place.location.lat === 'function') return place.location.lat();
@@ -110,7 +107,6 @@ function getPlaceName(place) {
     return typeof place.displayName === 'string' ? place.displayName : place.displayName.text;
 }
 
-// --------------------------------------------------
 
 function setupSearchBox() {
     const input = document.getElementById('searchInput');
@@ -149,12 +145,11 @@ function getUserLocation() {
                 });
                 statusBox.innerHTML = '<i class="fa-solid fa-check"></i> Konum bulundu!';
                 
-                // OTOMATİK ARAMA (Bunu ekledik)
+                // OTOMATİK ARAMA 
                 searchNearbyPlaces(['hospital'], userPos);
             },
             () => {
                 statusBox.textContent = "Hata: Konum alınamadı. Varsayılan konum gösteriliyor.";
-                // Konum yoksa varsayılan merkezde ara
                 searchNearbyPlaces(['hospital'], map.getCenter());
             }
         );
@@ -353,18 +348,18 @@ function filterType(type) {
     }
 }
 
-// Yol Tarifi (URL YAPISI DÜZELTİLDİ)
+
 function getDirections(lat, lng) {
-    // Standart Google Maps URL yapısı (Düzeltildi)
+    
     const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
     
     if (navigator.geolocation) {
          navigator.geolocation.getCurrentPosition((pos) => {
             const origin = `${pos.coords.latitude},${pos.coords.longitude}`;
-            // Konum varsa başlangıç noktası ekle
+            
             window.open(url + `&origin=${origin}`, '_blank');
          }, () => {
-             // Konum yoksa sadece hedefi aç
+            
              window.open(url, '_blank');
          });
     } else {
